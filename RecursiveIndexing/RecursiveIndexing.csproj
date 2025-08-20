@@ -103,7 +103,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="git.gitignore" />
     <None Include="packages.config" />
     <None Include="Riata.snk" />
   </ItemGroup>
