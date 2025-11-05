@@ -165,6 +165,7 @@ namespace Riata
                     throw new InvalidPluginExecutionException($"Record is missing or has an empty {nameAttribute}");
                 }
             }
+
             // Remove if profileAttribute is unused
             else // Delete and DeleteMultiple
             {
@@ -224,6 +225,7 @@ namespace Riata
                     targetRecord[parentAttribute] = deletedParentRef;
                 }
             }
+            
             else if (context.MessageName.Contains("Delete"))
             {
                 query.Criteria.AddCondition(new ConditionExpression(guidAttribute, ConditionOperator.NotEqual, ((EntityReference)context.ParentContext.SharedVariables["DeleteRef"]).Id));
@@ -233,17 +235,20 @@ namespace Riata
                 service
                 .RetrieveMultiple(query).Entities
                 .ToList();
-
+            
             if (context.MessageName.Contains("Create") ||
                 context.MessageName.Contains("Update"))
             { 
                 listWholeRecordSet.Add(targetRecord);
             }
 
-            if (WouldCauseCircularReference(targetRecord, listWholeRecordSet, parentAttribute))
+            if (!context.MessageName.Contains("Delete"))
             {
-                tracing.Trace("[ERROR] Record cannot become a child of its own child. Break relationship first.");
-                throw new InvalidPluginExecutionException("Record cannot become a child of its own child. Break relationship first.");
+                if (WouldCauseCircularReference(targetRecord, listWholeRecordSet, parentAttribute))
+                {
+                    tracing.Trace("[ERROR] Record cannot become a child of its own child. Break relationship first.");
+                    throw new InvalidPluginExecutionException("Record cannot become a child of its own child. Break relationship first.");
+                }
             }
 
             if (updateTriggeredFromDelete)
@@ -258,7 +263,7 @@ namespace Riata
                     ThisRecord[parentAttribute] = deletedParentRef;
                 }
             }
-
+            
             var dicChildrenLookup = new Dictionary<Guid, List<Entity>>();
 
             foreach (var ThisRecord in listWholeRecordSet)
@@ -273,7 +278,7 @@ namespace Riata
                         children.Add(ThisRecord);
                 }
             }
-
+            
             foreach (var children in dicChildrenLookup.Values)
             {
                 children.Sort((a, b) =>
@@ -284,7 +289,7 @@ namespace Riata
                     )
                 );
             }
-
+            
             var listRoots =
                     listWholeRecordSet
                     .Where(ThisRecord =>
@@ -294,7 +299,7 @@ namespace Riata
                     .ToList();
             var listRecordsToUpdate = new List<Entity>();
             int index = 0;
-
+            
             foreach (var ThisRecord in listRoots)
                 index = AssignIndices(ThisRecord, 
                                       index, 
